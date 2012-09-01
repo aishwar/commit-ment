@@ -1,0 +1,231 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+	<meta charset="UTF-8">
+	<title>Commit-ment</title>
+	<script type="text/javascript" src="http://code.jquery.com/jquery-1.8.1.js"></script>
+  <script type="text/javascript" src="http://underscorejs.org/underscore.js"></script>
+  <script type="text/javascript" src="http://d3js.org/d3.v2.js"></script>
+  <link rel="stylesheet" href="http://necolas.github.com/normalize.css/2.0.1/normalize.css" />
+  <style type="text/css">
+  .container {
+    width:1000px;
+    margin:0 auto;
+  }
+  h1 {
+    font-size:4em;
+  }
+  .large {
+    font-size:1.5em;
+    padding:0.25em;
+  }
+  input[type=search] {
+    width:500px;
+  }
+  .sidebar {
+    float:right;
+    width:300px;
+  }
+  rect {
+    fill:steelBlue;
+    stroke:white;
+  }
+  </style>
+  <script type="text/javascript">
+    "use strict";
+    
+    var Days = [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ];
+    
+    var Cache = {
+      // Independently cache them - because we want the users cache to always contains the whole repo list,
+      // If just 1 repo for a user was queried for and we added that to the users cache. The repo list in it would
+      // no longer be trustable as an indicator of the whole repo list of the user.
+      users:[],
+      repos:[]
+    }
+    
+    var User = {
+      getRepos: function (name, callback) {
+        $.getJSON("https://api.github.com/users/" + name + "/repos?callback=?", function (data) {
+          if (data.meta.status == 200)
+          {
+            Cache.users[name] = { repos:data.data }
+            callback.call(null, data.data)
+            return
+          }
+        });
+      }
+    }
+    
+    var Repo = {
+      getCommits: function (username, reponame, callback) {
+        $.getJSON("https://api.github.com/repos/" + username + "/" + reponame + "/commits?callback=?", function (data) {
+          var userRepos = Cache.repos[username] = Cache.repos[username] || {}
+          
+          if (data.meta && data.meta.status == 200)
+          {
+            userRepos[reponame] = { changesets:data.data }
+          }
+          else
+          {
+            userRepos[reponame] = {}
+          }
+          
+          callback.call(null, data.data)
+        });
+      }
+    }
+    
+    var UserRepos = {
+      getCommitDataFor: function (username, callback) {
+        
+        User.getRepos(username, function (repos) {
+          var processData = _.after(repos.length, function () {
+            var commits = UserRepos.processData(username)
+            callback.call(null, commits)
+          })
+          
+          for (var i = 0; i < repos.length; i++)
+          {
+            Repo.getCommits(username, repos[i].name, processData)
+          }
+        })
+        
+      },
+      
+      processData: function (username) {
+        var repos = Cache.users[username].repos
+        var allCommits = []
+        
+        for (var i = 0; i < repos.length; i++)
+        {
+          var repo = repos[i]
+          var changesets = Cache.repos[username][repo.name].changesets
+          
+          changesets = _.map(changesets, function (changeset) {
+            var commit = null
+            var date = null
+            
+            if (changeset.author && changeset.author.login == username)
+            {
+              date = changeset.commit.author.date
+              
+              commit = {
+                  username  : username
+                , reponame  : repo.name
+                , date      : new Date(date)
+              }
+            }
+            
+            return commit
+          });
+          
+          changesets = _.compact(changesets)
+          allCommits = allCommits.concat(changesets)
+        }
+        
+        return allCommits;
+      }
+    }
+    
+    function search() {
+      var searchBox = document.getElementById("search")
+      
+      UserRepos.getCommitDataFor(searchBox.value, function (commits) {
+        var bins = new Array(7)
+        var maxFrequency = 1
+        
+        // Initialize bins
+        for (var day = 0; day < 7; day++) {
+          bins[day] = new Array(24)
+          for (var hour = 0; hour < 24; hour++) { bins[day][hour] = 0 }
+        }
+        
+        // Populate bins using the commit data
+        _.map(commits, function (commit) {
+          var commitDate = commit.date
+            , day  = commitDate.getDay()
+            , hour = commitDate.getHours()
+            , bin  = bins[day]
+          
+          bin[hour] = bin[hour] + 1
+          
+          if (bin[hour] > maxFrequency)
+          {
+            maxFrequency = bin[hour]
+          }
+        })
+        
+        // Normalize the data
+        _.each(bins, function (hours, index) {
+          for (var i = 0; i < hours.length; i++)
+          {
+            hours[i] /= maxFrequency
+          }
+        })
+        
+        console.log("Bins ", bins)
+        
+        var sundayCommits = bins[6];
+        
+        // Graph it
+        var graph = $surface.chart.selectAll("rect").data(sundayCommits)
+        
+        graph.enter().append("rect")
+        
+        graph
+          .transition()
+          .attr("x", function (d, i) { return i * ($surface.width - 50) / 24 })
+          .attr("y", $surface.height / 7)
+          .attr("width", ($surface.width - 50) / 24)
+          .attr("height", function (d, i) { return d * $surface.height / 7 })
+      })
+    }
+    
+    function Chart() {
+      // Allow construction of the chart without the new operator
+      if (typeof this == "undefined") { return new Chart(); }
+      
+      var chart = null
+        , self = this
+      
+      this.width = 600
+      this.height = 375
+      
+      // Initialize the charting surface
+      this.chart = chart =
+        d3.select("#output")
+            .append("svg")
+            .attr("width", this.width)
+            .attr("height", this.height)
+      
+      // Draw the horizontal lines separating the days
+      chart.selectAll("line").data(Days).enter().append("line")
+        .attr("x1", 0)
+        .attr("x2", this.width)
+        .attr("y1", function (d, i) { return self.height / 7 * i })
+        .attr("y2", function (d, i) { return self.height / 7 * i })
+        .style("stroke","#ccc")
+    }
+    
+    $(function () {
+      window.$surface = new Chart();
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <h1>Are you commit-ted?</h1>
+    <section class="sidebar">
+      <h2>About</h2>
+      <p>Have a Dev hero/heorine? Want to know how they work? We can't spy into their lives. But we can look into their github commits. Find out their github work patterns</p>
+    </section>
+    <section class="main">
+      <input id="search" type="search" class="large" placeholder="Type and press enter" />
+      <button class="large" onclick="search(this)">Find Out</button>
+      <section id="output">
+      </section>
+    </section>
+  </div>
+</body>
+</html>
