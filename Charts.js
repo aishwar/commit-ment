@@ -9,86 +9,53 @@ function Chart()
 {
   this.width = 600
   this.height = 375
-  this.dayCharts = new Array(dayNames.length)
-  this.initialize()
-}
-
-Chart.prototype.initialize = function () {
-  var chart = d3.select("#output").append("svg").attr("width", this.width).attr("height", this.height)
-    , dayCharts = this.dayCharts
-    , chartHeight = this.height
-    , chartWidth = this.width
-    , newDayCharts = chart.selectAll("g").data(dayNames).enter()
-  
-  // Create the day charts
-  newDayCharts
-    .append("g")
-      .attr("id", function (d, i) { return d })
-      .style("transform", function (d, i) { return "translate(0," + (i+1)*(chartHeight/7) + ")" })
-  
-  // Draw the lines separating the different day charts
-  newDayCharts
-    .append("line")
-      .attr("x1", 0)
-      .attr("y1", function (d, i) { return (i+1)*(chartHeight/7) })
-      .attr("x2", this.width)
-      .attr("y2", function (d, i) { return (i+1)*(chartHeight/7) })
-      .style("stroke", "#ccc")
-  
-  // Create the day charts
-  for (var i = 0; i < dayNames.length; i++)
-  {
-    this.dayCharts[i] = new DayChart(dayNames[i], "g#" + dayNames[i], this)
-  }
+  this.chart = d3.select("#output").append("svg").attr("width", this.width).attr("height", this.height)
 }
 
 Chart.prototype.draw = function (data) {
-  for (var i = 0; i < dayNames.length; i++)
-  {
-    this.dayCharts[i].draw(data[i])
-  }
-}
-
-
-// Class to construct chart for a day
-// title: title of the day for which this chart is generated
-// selector: the selector to select the element containing this DayChart
-function DayChart(title, selector, parentChart)
-{
-  this.title = title
-  this.selector = selector
-  this.parentChart = parentChart
-}
-
-DayChart.prototype.draw = function (data) {
-  var dayChartSurface = d3.select(this.selector).append("g")
-    , dayChartRects = dayChartSurface.selectAll("rect").data(data || new Array())
-    , width = this.parentChart.width
-    , height = this.parentChart.height
+  var chart = this.chart
+    , dayCharts = chart.selectAll("g").data(data)
+    , newDayCharts = dayCharts.enter()
+    , self = this
+    , labelWidth = 100
+    , dayGraphAreaWidth = this.width - labelWidth
   
-  // Left side label area
-  dayChartSurface
-    .select("text")
-    .data(this.title)
-    .enter().append("text")
-      .attr("x", width / 2)
-      .attr("y", height / 2)
-      .attr("text-anchor", "middle")
-      .text(String)
+  // Create day containers
+  newDayCharts
+    .append("g")
+    .attr("transform", function (d, i) { return "translate(0," + i*self.height/7 + ")"; })
+      .append("line")
+      .style("stroke", "#ccc")
+      .attr("x1", 0).attr("x2", this.width)
+      .attr("y1", this.height/7).attr("y2", this.height/7)
   
-  // Right side data visualization
+  // Labels of the day container
+  newDayCharts
+    .append("text")
+    .attr("transform", function (d, i) { return "translate(0," + i*self.height/7 + ")"; })
+    .attr("x", labelWidth).attr("y", this.height/14)
+    .attr("text-anchor", "end")
+    .attr("dx", -10)
+    .text(function (d, i) { return dayNames[i] })
   
-  // dayChartRects.enter().append("rect")
-  // dayChartRects
-    // .transition()
-    // .attr("x", function (d, i) { return i *  })
+  // Vertical line
+  newDayCharts
+    .append("line")
+    .attr("transform", function (d, i) { return "translate(0," + i*self.height/7 + ")"; })
+    .attr("class", "vertical")
+    .attr("x1", labelWidth).attr("x2", labelWidth)
+    .attr("y1", 0).attr("y2", this.height/7)
+    .style("stroke", "#ccc")
   
-  // graph
-    // .transition()
-    // .attr("x", function (d, i) { return i * ($surface.width - 50) / 24 })
-    // .attr("y", $surface.height / 7)
-    // .attr("width", ($surface.width - 50) / 24)
-    // .attr("height", function (d, i) { return d * $surface.height / 7 })
+  dayCharts
+    .selectAll("rect")
+    .data(function (d) {
+      return d || new Array(24)
+    })
+    .enter().append("rect")
+    .attr("x", function (d, i) { return i*(dayGraphAreaWidth/24) })
+    .attr("y", 0)
+    .attr("height", function (d, i) { return d*self.height/7 || 0 })
 }
 
 window.Chart = Chart

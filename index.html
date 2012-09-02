@@ -166,27 +166,13 @@
           }
         })
         
-        console.log("Bins ", bins)
-        
-        var sundayCommits = bins[6];
-        
-        // Graph it
-        var graph = $surface.chart.selectAll("rect").data(sundayCommits)
-        
-        graph.enter().append("rect")
-        
-        graph
-          .transition()
-          .attr("x", function (d, i) { return i * ($surface.width - 50) / 24 })
-          .attr("y", $surface.height / 7)
-          .attr("width", ($surface.width - 50) / 24)
-          .attr("height", function (d, i) { return d * $surface.height / 7 })
+        $chart.draw(bins)
       })
     }
     
     $(function () {
-      var chart = new Chart()
-      chart.draw(new Array(7))
+      window.$chart = new Chart()
+      $chart.draw(new Array(7))
     });
   </script>
 </head>
