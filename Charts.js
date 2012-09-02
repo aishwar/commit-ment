@@ -19,6 +19,7 @@ Chart.prototype.draw = function (data) {
     , self = this
     , labelWidth = 100
     , dayGraphAreaWidth = this.width - labelWidth
+    , hourRects = null
   
   // Create day containers
   newDayCharts
@@ -47,15 +48,19 @@ Chart.prototype.draw = function (data) {
     .attr("y1", 0).attr("y2", this.height/7)
     .style("stroke", "#ccc")
   
-  dayCharts
-    .selectAll("rect")
-    .data(function (d) {
-      return d || new Array(24)
-    })
-    .enter().append("rect")
-    .attr("x", function (d, i) { return i*(dayGraphAreaWidth/24) })
-    .attr("y", 0)
+  // Set up the bar graphs
+  hourRects = dayCharts.selectAll("rect").data(function (d) { return d || new Array(24) })
+  
+  // Create new ones as necessary
+  hourRects.enter().append("rect")
+  
+  // Update the existing bars
+  hourRects
+    .transition()
+    .attr("x", function (d, i) { return labelWidth + i*(dayGraphAreaWidth/24) })
+    .attr("y", function (d, i) { return (1-d)*self.height/7 })
     .attr("height", function (d, i) { return d*self.height/7 || 0 })
+    .attr("width", dayGraphAreaWidth/24)
 }
 
 window.Chart = Chart
