@@ -3,9 +3,10 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Commit-ment</title>
-	<script type="text/javascript" src="http://code.jquery.com/jquery-1.8.1.js"></script>
-  <script type="text/javascript" src="http://underscorejs.org/underscore.js"></script>
-  <script type="text/javascript" src="http://d3js.org/d3.v2.js"></script>
+	<script src="http://code.jquery.com/jquery-1.8.1.js"></script>
+  <script src="http://underscorejs.org/underscore.js"></script>
+  <script src="http://d3js.org/d3.v2.js"></script>
+  <script src="Charts.js"></script>
   <link rel="stylesheet" href="http://necolas.github.com/normalize.css/2.0.1/normalize.css" />
   <style type="text/css">
   .container {
@@ -26,15 +27,16 @@
     float:right;
     width:300px;
   }
-  rect {
+  #output {
+    margin-top:2em;
+  }
+  #output rect {
     fill:steelBlue;
     stroke:white;
   }
   </style>
-  <script type="text/javascript">
+  <script>
     "use strict";
-    
-    var Days = [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" ];
     
     var Cache = {
       // Independently cache them - because we want the users cache to always contains the whole repo list,
@@ -182,34 +184,9 @@
       })
     }
     
-    function Chart() {
-      // Allow construction of the chart without the new operator
-      if (typeof this == "undefined") { return new Chart(); }
-      
-      var chart = null
-        , self = this
-      
-      this.width = 600
-      this.height = 375
-      
-      // Initialize the charting surface
-      this.chart = chart =
-        d3.select("#output")
-            .append("svg")
-            .attr("width", this.width)
-            .attr("height", this.height)
-      
-      // Draw the horizontal lines separating the days
-      chart.selectAll("line").data(Days).enter().append("line")
-        .attr("x1", 0)
-        .attr("x2", this.width)
-        .attr("y1", function (d, i) { return self.height / 7 * i })
-        .attr("y2", function (d, i) { return self.height / 7 * i })
-        .style("stroke","#ccc")
-    }
-    
     $(function () {
-      window.$surface = new Chart();
+      var chart = new Chart()
+      chart.draw(new Array(7))
     });
   </script>
 </head>
