@@ -48,6 +48,8 @@
     
     var User = {
       getRepos: function (name, callback) {
+        if (name in Cache.users) { return Cache.users[name] }
+        
         $.getJSON("https://api.github.com/users/" + name + "/repos?callback=?", function (data) {
           if (data.meta.status == 200)
           {
@@ -61,6 +63,8 @@
     
     var Repo = {
       getCommits: function (username, reponame, callback) {
+        if (username in Cache.repos && reponame in Cache.repos[username]) { return Cache.users[name] }
+        
         $.getJSON("https://api.github.com/repos/" + username + "/" + reponame + "/commits?callback=?", function (data) {
           var userRepos = Cache.repos[username] = Cache.repos[username] || {}
           
