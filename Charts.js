@@ -58,7 +58,7 @@ Chart.prototype.draw = function (data) {
   hourRects
     .transition()
     .attr("x", function (d, i) { return labelWidth + i*(dayGraphAreaWidth/24) })
-    .attr("y", function (d, i) { return (1-d)*self.height/7 })
+    .attr("y", function (d, i) { return (1-d)*self.height/7 || 0 })
     .attr("height", function (d, i) { return d*self.height/7 || 0 })
     .attr("width", dayGraphAreaWidth/24)
 }
